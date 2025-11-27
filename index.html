@@ -23,9 +23,6 @@
       box-sizing: border-box;
     }
 
-    /* =========================================
-       核心修改：增强版 Scroll Snap 配置
-       ========================================= */
     html,
     body {
       margin: 0;
@@ -121,9 +118,6 @@
       width: 100%;
     }
 
-    /* =========================================
-       核心修改：Section 强制吸附
-       ========================================= */
     section {
       /* 捕捉点：对齐视口顶部 */
       scroll-snap-align: start;
@@ -369,10 +363,6 @@
       color: #4ec9b0;
     }
 
-    /* =========================================
-       核心修改：Placeholder Box (图表容器)
-       重新设计为“上标题 + 下图片”的结构
-       ========================================= */
     .placeholder-box {
       border: 2px dashed rgba(255, 255, 255, 0.1);
       background: rgba(255, 255, 255, 0.01);
@@ -487,7 +477,6 @@
 
     .loss-grid {
       display: grid;
-      /* 核心修改：强制固定为 2 列，这样4张图就会自然变为 2行x2列 */
       grid-template-columns: repeat(2, 1fr);
       gap: 1.5rem;
       /* 图片之间的间距 */
@@ -539,10 +528,6 @@
 
 <body>
 
-  <!-- 
-    核心修改：增加一个 scroll-container 
-    这是实现强力滚动吸附的关键，它接管了整个页面的滚动
-  -->
   <div class="scroll-container">
 
     <nav>
@@ -618,7 +603,6 @@
 
           <!-- 2. 底部：图片容器 -->
           <div class="chart-content">
-            <!-- 修改：使用新的文件名 seasonal_map.png -->
             <img src="./seasonal_map.png" alt="研究区域与 AIS 轨迹时空分布图" class="chart-img"
               onerror="this.style.display='none'; this.parentNode.querySelector('.placeholder-text').style.display='block';">
 
