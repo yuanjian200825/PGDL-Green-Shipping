@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>船舶能耗预测研究</title>
+  <style>
+    :root {
+      --dark-bg: #0a0e1a;
+      --light-bg: #ffffff;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --text-dark: #0f172a;
+      --text-light: #e2e8f0;
+      --text-muted: #94a3b8;
+      --max-width: 1200px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* =========================================
+       核心修改：增强版 Scroll Snap 配置
+       ========================================= */
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      /* 关键：高度必须固定，overflow 由 scroll-container 接管 */
+      height: 100vh;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", Roboto, sans-serif;
+      background-color: var(--dark-bg);
+      color: var(--text-light);
+      line-height: 1.6;
+    }
+
+    /* 创建一个滚动容器来接管滚动行为 */
+    .scroll-container {
+      height: 100vh;
+      overflow-y: scroll;
+      /* y轴方向强制捕捉 */
+      scroll-snap-type: y mandatory;
+      scroll-behavior: smooth;
+      position: relative;
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--dark-bg);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-blue);
+    }
+
+    /* 导航栏 */
+    nav {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      padding: 1.2rem 2rem;
+      background: rgba(10, 14, 26, 0.9);
+      backdrop-filter: blur(12px);
+      z-index: 1000;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-content {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 3rem;
+    }
+
+    .nav-links a {
+      color: var(--text-light);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      opacity: 0.7;
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .nav-links a:hover {
+      opacity: 1;
+      color: var(--accent-cyan);
+    }
+
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      width: 0;
+      height: 2px;
+      bottom: -5px;
+      left: 0;
+      background-color: var(--accent-cyan);
+      transition: width 0.3s;
+    }
+
+    .nav-links a:hover::after {
+      width: 100%;
+    }
+
+    /* =========================================
+       核心修改：Section 强制吸附
+       ========================================= */
+    section {
+      /* 捕捉点：对齐视口顶部 */
+      scroll-snap-align: start;
+      /* 防止一次滚过多个 section，保证一页一页翻 */
+      scroll-snap-stop: always;
+
+      /* 必须占满全屏，否则吸附效果不明显 */
+      min-height: 100vh;
+      width: 100%;
+
+      /* 内容垂直居中 */
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+
+      padding: 6rem 2rem;
+      max-width: var(--max-width);
+      margin: 0 auto;
+      position: relative;
+      /* 配合 snap */
+    }
+
+    .section-title {
+      font-size: 2.8rem;
+      margin-bottom: 1rem;
+      text-align: center;
+      background: linear-gradient(to right, #fff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 800;
+    }
+
+    .section-subtitle {
+      text-align: center;
+      color: var(--text-muted);
+      margin-bottom: 4rem;
+      font-size: 1.1rem;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .content-wrapper {
+      background: rgba(30, 41, 59, 0.4);
+      border-radius: 24px;
+      padding: 3rem;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+      width: 100%;
+    }
+
+    /* Hero */
+    .hero {
+      height: 100vh;
+      padding-top: 0;
+      /* Hero 也需要吸附 */
+      scroll-snap-align: start;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-bg {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 120%;
+      height: 120%;
+      background: radial-gradient(circle at center, rgba(59, 130, 246, 0.15) 0%, rgba(10, 14, 26, 0) 60%);
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .hero h1 {
+      font-size: 3.8rem;
+      margin-bottom: 2rem;
+      line-height: 1.3;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .hero p {
+      font-size: 1.4rem;
+      color: var(--text-muted);
+      margin-bottom: 2.5rem;
+      font-weight: 300;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* Feature Cards */
+    .grid-layout {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 2rem;
+    }
+
+    .feature-card {
+      background: rgba(255, 255, 255, 0.02);
+      padding: 2.5rem;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-8px);
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .feature-card:hover::before {
+      opacity: 1;
+    }
+
+    .card-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1.5rem;
+      display: block;
+    }
+
+    .card-title {
+      font-size: 1.3rem;
+      margin-bottom: 1rem;
+      color: var(--text-light);
+      font-weight: 700;
+    }
+
+    .card-desc {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+
+    /* Code Tabs */
+    .code-tabs {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 0;
+      padding: 0 1rem;
+      /* 让tab列表可以横向滚动如果太窄 */
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .code-tab {
+      padding: 0.8rem 1.5rem;
+      background: #1e1e1e;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 0.9rem;
+      font-family: monospace;
+      white-space: nowrap;
+    }
+
+    .code-tab:hover {
+      color: var(--text-light);
+      background: #252525;
+    }
+
+    .code-tab.active {
+      background: #2d2d2d;
+      color: var(--accent-cyan);
+      border-top: 2px solid var(--accent-cyan);
+      font-weight: bold;
+    }
+
+    .code-window {
+      background: #1e1e1e;
+      border-radius: 0 12px 12px 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .code-content-container {
+      display: none;
+    }
+
+    .code-content-container.active {
+      display: block;
+      animation: fadeIn 0.5s;
+    }
+
+    .code-content {
+      padding: 2rem;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      color: #d4d4d4;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    /* Syntax Highlighting */
+    .kw {
+      color: #569cd6;
+      font-weight: bold;
+    }
+
+    .fn {
+      color: #dcdcaa;
+    }
+
+    .str {
+      color: #ce9178;
+    }
+
+    .cm {
+      color: #6a9955;
+      font-style: italic;
+    }
+
+    .num {
+      color: #b5cea8;
+    }
+
+    .cls {
+      color: #4ec9b0;
+    }
+
+    /* =========================================
+       核心修改：Placeholder Box (图表容器)
+       重新设计为“上标题 + 下图片”的结构
+       ========================================= */
+    .placeholder-box {
+      border: 2px dashed rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.01);
+      border-radius: 12px;
+      /* 改为 flex-column，内容从上到下排列 */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      /* 移除 justify-content: center，让标题顶上去 */
+      justify-content: flex-start;
+      padding: 1rem;
+      /* 给容器加内边距 */
+      color: var(--text-muted);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      height: 100%;
+      /* 容器高度自适应或继承 */
+      min-height: 350px;
+      /* 最小高度 */
+    }
+
+    .placeholder-box:hover {
+      border-color: var(--accent-blue);
+      background: rgba(59, 130, 246, 0.05);
+    }
+
+    /* 图表标题区域 */
+    .chart-header {
+      width: 100%;
+      text-align: center;
+      margin-bottom: 1rem;
+      z-index: 2;
+      /* 保证文字在上层 */
+    }
+
+    .chart-title {
+      font-weight: bold;
+      color: var(--text-light);
+      font-size: 1rem;
+    }
+
+    .chart-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    /* 图片容器区域：占据剩余空间 */
+    .chart-content {
+      flex-grow: 1;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.2);
+      /* 给图片加个深色底，防止透明图看不清 */
+    }
+
+    /* Image Styling */
+    .chart-img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      /* 保持比例，完整显示 */
+      display: block;
+    }
+
+    /* Fallback Styling (无图片时显示的图标) */
+    .placeholder-text {
+      text-align: center;
+      opacity: 0.5;
+    }
+
+    /* Animations (Bouncy Effect) */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(60px) scale(0.95);
+      transition: opacity 0.8s ease-out, transform 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .delay-1 {
+      transition-delay: 0.1s;
+    }
+
+    .delay-2 {
+      transition-delay: 0.2s;
+    }
+
+    .delay-3 {
+      transition-delay: 0.3s;
+    }
+
+    .delay-4 {
+      transition-delay: 0.4s;
+    }
+
+    /* Footer Snap */
+    .footer-snap {
+      /* Footer 也可以作为最后一站 */
+      scroll-snap-align: end;
+      padding: 2rem 0;
+    }
+
+    .loss-grid {
+      display: grid;
+      /* 核心修改：强制固定为 2 列，这样4张图就会自然变为 2行x2列 */
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+      /* 图片之间的间距 */
+      margin-top: 2rem;
+    }
+
+    .loss-card {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: transform 0.3s ease;
+    }
+
+    .loss-card:hover {
+      transform: translateY(-5px);
+      border-color: var(--accent-blue);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .loss-img-container {
+      width: 100%;
+      aspect-ratio: 16/10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border-radius: 8px;
+      background: white;
+      margin-bottom: 1rem;
+    }
+
+    .loss-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .loss-label {
+      color: var(--text-light);
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- 
+    核心修改：增加一个 scroll-container 
+    这是实现强力滚动吸附的关键，它接管了整个页面的滚动
+  -->
+  <div class="scroll-container">
+
+    <nav>
+      <div class="nav-content">
+        <div class="nav-links">
+          <a href="#overview">概览</a>
+          <a href="#methodology">技术方案</a>
+          <a href="#training">模型训练</a>
+          <a href="#ablation">消融实验</a>
+          <a href="#code">核心代码</a>
+          <a href="#conclusion">项目总结</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="overview" class="hero">
+      <div class="hero-bg"></div>
+      <div class="fade-in">
+        <h1>物理特征与深度学习<br>船舶能耗预测</h1>
+        <p>基于 AIS 大数据与流体力学先验的能耗估算研究</p>
+
+        <div style="margin-top: 2.5rem;">
+          <a href="#methodology"
+            style="background: var(--accent-blue); color: white; padding: 0.8rem 2rem; border-radius: 50px; text-decoration: none; font-weight: 600; margin-right: 1rem;">查看方案</a>
+          <a href="#code"
+            style="background: rgba(255,255,255,0.1); color: white; padding: 0.8rem 2rem; border-radius: 50px; text-decoration: none; font-weight: 600;">查看代码</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Methodology Section -->
+    <section id="methodology">
+      <h2 class="section-title fade-in">技术方案</h2>
+      <p class="section-subtitle fade-in delay-1">融合流体力学先验知识的数据工程与特征构建</p>
+
+      <div class="content-wrapper fade-in delay-2">
+        <div class="grid-layout">
+          <div class="feature-card fade-in delay-1">
+            <span class="card-icon">📐</span>
+            <h3 class="card-title">物理引导特征工程</h3>
+            <p class="card-desc">显式引入 <b>$SOG^3$ (立方航速)</b> 和 <b>$Wave^2$ (波浪增阻)</b> 等流体力学先验特征，显著降低模型学习非线性物理规律的难度。</p>
+          </div>
+          <div class="feature-card fade-in delay-2">
+            <span class="card-icon">🔧</span>
+            <h3 class="card-title">迭代式数据清洗</h3>
+            <p class="card-desc">
+              实施反馈驱动的清洗策略：通过<b>维度修正 (Reshape)</b> 解决序列结构问题，并应用 <b>3σ 统计滤波</b> 与 <b>物理边界约束</b> 剔除极端离群值，构建高质量数据集。
+            </p>
+          </div>
+          <div class="feature-card fade-in delay-3">
+            <span class="card-icon">⚡</span>
+            <h3 class="card-title">高性能训练策略</h3>
+            <p class="card-desc">
+              针对海量 AIS 数据，采用 <b>磁盘内存映射 (Memory Mapping)</b> 技术实现零拷贝加载，并集成 <b>ReduceLROnPlateau</b> 自适应调整学习率，有效解决 OOM
+              问题并加速收敛。
+            </p>
+          </div>
+        </div>
+
+        <!-- 
+          修改：调整盒子布局为 [上：标题区] + [下：图片区]
+          height: 600px; max-width: 800px; 适配正方形地图
+        -->
+        <div class="placeholder-box fade-in delay-4"
+          style="margin-top: 3rem; height: 650px; max-width: 800px; margin-left: auto; margin-right: auto;">
+
+          <!-- 1. 顶部：固定的标题区域 (不会被图片遮挡) -->
+          <div class="chart-header">
+            <div class="chart-title">研究区域与 AIS 轨迹时空分布图</div>
+            <div class="chart-desc">展示休斯顿航道 (Houston Ship Channel) 的内河与外海数据覆盖范围</div>
+          </div>
+
+          <!-- 2. 底部：图片容器 -->
+          <div class="chart-content">
+            <!-- 修改：使用新的文件名 seasonal_map.png -->
+            <img src="./seasonal_map.png" alt="研究区域与 AIS 轨迹时空分布图" class="chart-img"
+              onerror="this.style.display='none'; this.parentNode.querySelector('.placeholder-text').style.display='block';">
+
+            <!-- Fallback text (如果图片没加载出来显示这个) -->
+            <div class="placeholder-text" style="display: none;">
+              <div style="font-size: 3rem; margin-bottom: 1rem;">🗺️</div>
+              <p>Map Visualization Placeholder</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Model Training Section -->
+    <section id="training">
+      <h2 class="section-title fade-in">模型训练</h2>
+      <p class="section-subtitle fade-in delay-1">多层次模型对比与训练稳定性验证</p>
+      <div class="content-wrapper fade-in delay-2">
+
+        <div class="grid-layout">
+          <div class="feature-card fade-in delay-1" style="border-color: var(--accent-blue);">
+            <h3 class="card-title" style="color: var(--accent-blue);">传统基线模型</h3>
+            <ul style="list-style: none; color: var(--text-muted); line-height: 2;">
+              <li>🔹 <b>Ridge Regression</b>: 线性基准，用于验证物理特征的相关性。</li>
+              <li>🔹 <b>XGBoost</b>: 树模型，作为捕捉非线性关系的强力基线。</li>
+            </ul>
+          </div>
+          <div class="feature-card fade-in delay-2" style="border-color: var(--accent-cyan);">
+            <h3 class="card-title" style="color: var(--accent-cyan);">深度时序模型</h3>
+            <ul style="list-style: none; color: var(--text-muted); line-height: 2;">
+              <li>🚀 <b>Attention-LSTM</b>: 核心模型，结合LSTM与注意力机制。</li>
+              <li>🔹 <b>Transformer</b>: 自注意力机制对比基准。</li>
+              <li>🔹 <b>Pure LSTM / GRU</b>: 基础RNN模型。</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="fade-in delay-3" style="margin-top: 3rem; text-align: center;">
+          <h3 style="color: var(--text-light); margin-bottom: 0.5rem;">深度学习模型损失收敛曲线 (Untuned)</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">对比各模型在未调优状态下的收敛速度与稳定性 (Epoch 1-50)</p>
+        </div>
+
+        <div class="loss-grid fade-in delay-4">
+
+          <div class="loss-card">
+            <div class="loss-img-container">
+              <img src="./Attention_LSTM_untuned_loss.png" alt="Attention LSTM Loss" class="loss-img">
+            </div>
+            <div class="loss-label">Attention-LSTM Model</div>
+          </div>
+
+          <div class="loss-card">
+            <div class="loss-img-container">
+              <img src="./Transformer_untuned_loss.png" alt="Transformer Loss" class="loss-img">
+            </div>
+            <div class="loss-label">Transformer Model</div>
+          </div>
+
+          <div class="loss-card">
+            <div class="loss-img-container">
+              <img src="./LSTM_untuned_loss.png" alt="LSTM Loss" class="loss-img">
+            </div>
+            <div class="loss-label">Pure LSTM Model</div>
+          </div>
+
+          <div class="loss-card">
+            <div class="loss-img-container">
+              <img src="./GRU_untuned_loss.png" alt="GRU Loss" class="loss-img">
+            </div>
+            <div class="loss-label">GRU Model</div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Ablation Study Section -->
+    <section id="ablation">
+      <h2 class="section-title fade-in">消融实验</h2>
+      <p class="section-subtitle fade-in delay-1">验证物理引导特征的核心贡献</p>
+
+      <div class="content-wrapper fade-in delay-2">
+        <div style="margin-bottom: 3rem;">
+          <div class="feature-card fade-in delay-1" style="border-left: 4px solid var(--accent-cyan); padding: 2rem;">
+            <h3 class="card-title" style="margin-bottom: 0.5rem;">🔬 实验设计逻辑</h3>
+            <p style="color: var(--text-muted);">
+              为了验证<b>“物理引导特征工程”</b>的有效性，我们基于 Attention-LSTM 模型进行了特征消融测试。实验通过<b>移除流体力学先验特征</b>（$SOG^3$ 与
+              $Wave^2$），但保持模型架构与超参数不变，从而量化物理规律对预测精度的净贡献。
+            </p>
+          </div>
+        </div>
+
+        <div class="grid-layout" style="grid-template-columns: 1fr 1fr; gap: 2rem;">
+          <!-- Chart 1 -->
+          <div class="fade-in delay-2" style="display: flex; flex-direction: column;">
+            <div class="placeholder-box" style="flex-grow: 1; min-height: 350px;">
+
+              <!-- 标题区 -->
+              <div class="chart-header">
+                <div class="chart-title">RMSE 误差对比</div>
+                <div class="chart-desc">Full Model vs. w/o Physics</div>
+              </div>
+
+              <!-- 图片区 -->
+              <div class="chart-content">
+                <img src="./placeholder_rmse.png" alt="RMSE 误差对比" class="chart-img"
+                  onerror="this.style.display='none'; this.parentNode.querySelector('.placeholder-text').style.display='block';">
+                <div class="placeholder-text" style="display: none;">
+                  <div style="font-size: 3rem; margin-bottom: 1rem; color: var(--accent-blue);">📊</div>
+                  <p>RMSE Bar Chart</p>
+                </div>
+              </div>
+
+            </div>
+            <p style="text-align: center; margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted);">物理特征移除后的性能显著衰减
+            </p>
+          </div>
+
+          <!-- Chart 2 -->
+          <div class="fade-in delay-3" style="display: flex; flex-direction: column;">
+            <div class="placeholder-box" style="flex-grow: 1; min-height: 350px;">
+
+              <!-- 标题区 -->
+              <div class="chart-header">
+                <div class="chart-title">预测偏差时序图</div>
+                <div class="chart-desc">Physics Deviation Plot</div>
+              </div>
+
+              <!-- 图片区 -->
+              <div class="chart-content">
+                <img src="./placeholder_time_series.png" alt="预测偏差时序图" class="chart-img"
+                  onerror="this.style.display='none'; this.parentNode.querySelector('.placeholder-text').style.display='block';">
+                <div class="placeholder-text" style="display: none;">
+                  <div style="font-size: 3rem; margin-bottom: 1rem; color: var(--accent-cyan);">📉</div>
+                  <p>Time-Series Plot</p>
+                </div>
+              </div>
+
+            </div>
+            <p style="text-align: center; margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted);">
+              缺失物理特征导致高速区间的能耗削峰现象</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Code Implementation Section -->
+    <section id="code">
+      <h2 class="section-title fade-in">核心代码实现</h2>
+      <p class="section-subtitle fade-in delay-1">基于 TensorFlow 的物理引导深度学习框架实现</p>
+
+      <div class="fade-in delay-2">
+
+        <div class="code-tabs">
+          <div class="code-tab active" onclick="switchTab(event, 'code-feature')">Feature Engineering</div>
+          <div class="code-tab" onclick="switchTab(event, 'code-cleaning')">Data Cleaning</div>
+          <div class="code-tab" onclick="switchTab(event, 'code-model')">Attention-LSTM</div>
+          <div class="code-tab" onclick="switchTab(event, 'code-ablation')">Ablation Study</div>
+          <div class="code-tab" onclick="switchTab(event, 'code-training')">Training Strategy</div>
+          <div class="code-tab" onclick="switchTab(event, 'code-viz')">Visualization</div>
+        </div>
+
+        <div class="code-window">
+
+          <!-- 1. Feature Engineering -->
+          <div id="code-feature" class="code-content-container active">
+            <pre class="code-content line-numbers"><code class="language-python">
+<span class="cm"># File: src/preprocessor.py</span>
+<span class="cm"># Context: Explicitly calculating fluid dynamics features (SOG^3, Wave^2)</span>
+<span class="cm"># to linearize the learning problem.</span>
+
+<span class="kw">def</span> <span class="fn">generate_features</span>(df):
+<span class="cm"># ... (Basic feature engineering) ...</span>
+
+<span class="cm"># 4. Physics-Guided Features</span>
+<span class="cm"># Explicitly introduce cubic speed and squared wave height</span>
+<span class="cm"># based on ship resistance equations (R ~ v^3)</span>
+df[<span class="str">'SOG_Cubed'</span>] = df[<span class="str">'SOG'</span>] ** <span class="num">3</span>
+df[<span class="str">'Wave_Squared'</span>] = df[<span class="str">'WaveHeight'</span>] ** <span class="num">2</span>
+
+<span class="cm"># ... (Temporal features) ...</span>
+<span class="kw">return</span> df
+</code></pre>
+          </div>
+
+          <!-- 2. Data Cleaning -->
+          <div id="code-cleaning" class="code-content-container">
+            <pre class="code-content line-numbers"><code class="language-python">
+<span class="cm"># File: src/preprocessor.py</span>
+<span class="cm"># Context: Using statistical methods (3-sigma) and feature clipping</span>
+<span class="cm"># to handle extreme outliers in AIS data.</span>
+
+<span class="kw">def</span> <span class="fn">filter_outliers</span>(X, y, quantile_range=(<span class="num">0.005</span>, <span class="num">0.995</span>)):
+<span class="cm"># 1. Filter based on y (Energy Consumption)</span>
+y_lower = np.<span class="fn">quantile</span>(y, quantile_range[<span class="num">0</span>])
+y_upper = np.<span class="fn">quantile</span>(y, quantile_range[<span class="num">1</span>])
+y_mask = (y >= y_lower) & (y <= y_upper) <span class="cm"># 2. Filter based on X features (remove samples
+  with any extreme feature)</span>
+  <span class="cm"># ... (Loop through features) ...</span>
+
+  <span class="kw">return</span> X[final_mask], y[final_mask]
+
+  <span class="kw">def</span> <span class="fn">clip_features</span>(X, clip_range=<span class="num">5.0</span>):
+  <span class="cm"># Clip features to +/- 5.0 std devs to prevent gradient explosion</span>
+  <span class="kw">return</span> np.<span class="fn">clip</span>(X, -clip_range, clip_range)
+</code></pre>
+          </div>
+
+          <!-- 3. Attention-LSTM Model -->
+          <div id="code-model" class="code-content-container">
+            <pre class="code-content line-numbers"><code class="language-python">
+<span class="cm"># File: src/models/attention_lstm.py</span>
+<span class="cm"># Context: The core deep learning model that uses attention</span>
+<span class="cm"># to focus on critical time steps (acceleration, turning).</span>
+
+<span class="kw">class</span> <span class="cls">TemporalAttention</span>(layers.Layer):
+  <span class="kw">def</span> <span class="fn">call</span>(self, x):
+  <span class="cm"># x shape: (Batch, Time, Features)</span>
+  <span class="cm"># Score = tanh(Wx + b)</span>
+  e = tf.keras.backend.<span class="fn">tanh</span>(tf.keras.backend.<span class="fn">dot</span>(x, self.W)
+  + self.b)
+
+  <span class="cm"># Calculate attention weights (alpha)</span>
+  alpha = tf.keras.backend.<span class="fn">softmax</span>(tf.<span class="fn">squeeze</span>(e, axis=-<span class="num">1</span>))
+  alpha = tf.<span class="fn">expand_dims</span>(alpha, axis=-<span class="num">1</span>)
+
+  <span class="cm"># Weighted sum to get context vector</span>
+  context = x * alpha
+  context = tf.keras.backend.<span class="fn">sum</span>(context, axis=<span class="num">1</span>)
+  <span class="kw">return</span> context, alpha
+
+  <span class="kw">def</span> <span class="fn">build_attention_lstm</span>(input_shape):
+  inputs = layers.<span class="fn">Input</span>(shape=input_shape)
+  <span class="cm"># Stacked LSTM layers</span>
+  x = layers.<span class="fn">LSTM</span>(DL_HIDDEN_UNITS, return_sequences=<span class="kw">True</span>)(inputs)
+  x = layers.<span class="fn">LSTM</span>(DL_HIDDEN_UNITS, return_sequences=<span class="kw">True</span>)(x)
+
+  <span class="cm"># Attention Mechanism</span>
+  context, alpha = <span class="fn">TemporalAttention</span>()(x)
+
+  outputs = layers.<span class="fn">Dense</span>(<span class="num">1</span>)(context)
+  <span class="kw">return</span> models.<span class="fn">Model</span>(inputs=inputs, outputs=outputs)
+</code></pre>
+          </div>
+
+          <!-- 4. Ablation Study -->
+          <div id="code-ablation" class="code-content-container">
+            <pre class="code-content line-numbers"><code class="language-python">
+<span class="cm"># File: ablation_study/step2_train_model.py</span>
+<span class="cm"># Context: Verifying the contribution of physics features by selectively</span>
+<span class="cm"># removing them while keeping the model structure identical.</span>
+
+<span class="cm"># Experiment Configuration: Ablation Study</span>
+<span class="cm"># Compare "Full Physics" vs "No Physics"</span>
+experiments = {
+<span class="str">'With_Physics'</span>: {
+<span class="str">'features'</span>: [<span class="str">'SOG'</span>, <span
+  class="str">'SOG_Cubed'</span>, <span class="str">'WaveHeight'</span>, <span
+  class="str">'Wave_Squared'</span>, ...],
+<span class="str">'description'</span>: <span class="str">'Full model with physics-guided terms'</span>
+},
+<span class="str">'No_Physics'</span>: {
+<span class="str">'features'</span>: [<span class="str">'SOG'</span>, <span
+  class="str">'WaveHeight'</span>, ...], <span class="cm"># Removed SOG^3 and Wave^2</span>
+<span class="str">'description'</span>: <span class="str">'Baseline model relying only on raw data'</span>
+}
+}
+
+<span class="kw">for</span> exp_name, config <span class="kw">in</span> experiments.items():
+<span class="fn">print</span>(f<span class="str">"Running Ablation: {exp_name}"</span>)
+<span class="cm"># Train model with specific feature subset...</span>
+<span class="cm"># Result: 'No_Physics' model shows higher RMSE in high-speed zones</span>
+</code></pre>
+          </div>
+
+          <!-- 5. Training Strategy -->
+          <div id="code-training" class="code-content-container">
+            <pre class="code-content line-numbers"><code class="language-python">
+<span class="cm"># File: main_step2_experiment_gpu.py</span>
+<span class="cm"># Context: Handling large-scale data with memory mapping and adaptive learning
+  rates.</span>
+
+<span class="kw">class</span> <span class="cls">FastBatchGenerator</span>(tf.keras.utils.Sequence):
+<span class="kw">def</span> <span class="fn">__init__</span>(self, X_path, y_path, batch_size):
+<span class="cm"># Memory Mapping: Zero-copy data loading from disk</span>
+self.X = np.<span class="fn">memmap</span>(X_path, dtype=<span class="str">'float32'</span>, mode=<span
+  class="str">'r'</span>, shape=x_shape)
+self.y = np.<span class="fn">memmap</span>(y_path, dtype=<span class="str">'float32'</span>, mode=<span
+  class="str">'r'</span>, shape=y_shape)
+
+<span class="cm"># Callbacks for stable training</span>
+callbacks = [
+<span class="fn">EarlyStopping</span>(monitor=<span class="str">'val_loss'</span>, patience=<span
+  class="num">5</span>, restore_best_weights=<span class="kw">True</span>),
+<span class="fn">ReduceLROnPlateau</span>(monitor=<span class="str">'val_loss'</span>, factor=<span
+  class="num">0.2</span>, patience=<span class="num">2</span>)
+]
+</code></pre>
+          </div>
+
+          <!-- 6. Visualization -->
+          <div id="code-viz" class="code-content-container">
+            <pre class="code-content line-numbers"><code class="language-python">
+<span class="cm"># File: main_step3_plot.py</span>
+<span class="cm"># Context: Visualizing the learned attention weights to confirm</span>
+<span class="cm"># the model learns physical logic.</span>
+
+<span class="kw">def</span> <span class="fn">plot_attention_heatmap</span>(model, X_sample):
+<span class="cm"># Extract attention weights from the trained model</span>
+_, attention_weights = model.<span class="fn">predict</span>(X_sample)
+
+<span class="cm"># Plot heatmap: Time Steps vs. Attention Intensity</span>
+sns.<span class="fn">heatmap</span>(attention_weights.T, cmap=<span class="str">'viridis'</span>)
+plt.<span class="fn">title</span>(<span class="str">"Temporal Attention Weights"</span>)
+plt.<span class="fn">xlabel</span>(<span class="str">"Time Step (Past -> Future)"</span>)
+<span class="cm"># High weights coincide with rapid acceleration events</span>
+</code></pre>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+
+    <!-- Final Conclusion Section -->
+    <section id="conclusion">
+      <h2 class="section-title fade-in">项目总结</h2>
+      <p class="section-subtitle fade-in delay-1">基于物理引导与数据驱动融合的研究成果</p>
+
+      <div class="content-wrapper fade-in delay-2">
+        <div class="grid-layout" style="gap: 3rem;">
+          <!-- 核心成果 -->
+          <div class="feature-card fade-in delay-1" style="border-color: var(--accent-blue);">
+            <h3 style="color: var(--accent-blue); margin-bottom: 1.5rem; font-size: 1.4rem;">✅ 核心成果</h3>
+            <ul style="color: var(--text-muted); list-style: none; line-height: 2.2;">
+              <li>🔹 <b>Untuned R² > 0.999</b>：验证了物理引导特征 ($SOG^3$) 对非线性映射的极强线性化能力，极大降低了模型训练难度。</li>
+              <li>🔹 <b>可解释性验证</b>：Attention 机制成功捕捉加速与转向等关键能耗事件，特征重要性分析（XGBoost vs Ridge）验证了物理一致性。</li>
+              <li>🔹 <b>低成本代理模型</b>：成功构建了无需昂贵传感器、仅依赖公开 AIS 与气象数据的区域级高精度能耗估算方案。</li>
+            </ul>
+          </div>
+
+          <!-- 未来展望 -->
+          <div class="feature-card fade-in delay-2" style="border-color: var(--accent-cyan);">
+            <h3 style="color: var(--accent-cyan); margin-bottom: 1.5rem; font-size: 1.4rem;">🚀 未来展望</h3>
+            <ul style="color: var(--text-muted); list-style: none; line-height: 2.2;">
+              <li>🔹 <b>泛化能力测试</b>：计划将模型推广至全球其他繁忙港口（如上海港、鹿特丹港）进行跨域验证。</li>
+              <li>🔹 <b>实时系统部署</b>：将训练好的轻量化模型封装为 API 服务，接入实时 AIS 数据流进行在线预测。</li>
+              <li>🔹 <b>多物理场融合</b>：引入洋流 (Ocean Currents) 和船体污底 (Hull Fouling) 因子，进一步提升在极端海况下的预测精度。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    // 滚动淡入动画 (Intersection Observer)
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.15 }); // 稍微增加阈值，确保元素进入一点后再触发
+
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+    // 代码Tab切换逻辑
+    function switchTab(event, tabId) {
+      document.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.code-content-container').forEach(c => c.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
+  </script>
+</body>
+
+</html>
