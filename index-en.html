@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      Physics-Guided Deep Learning Framework for Green Shipping Digital Twins
+    </title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root {
+        --dark-bg: #0b1121;
+        --card-bg: rgba(20, 30, 48, 0.85);
+        --accent-blue: #3b82f6;
+        --accent-green: #10b981;
+        --accent-cyan: #06b6d4;
+        --accent-purple: #8b5cf6;
+        --text-primary: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --max-width: 1200px;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+          "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--dark-bg);
+        color: var(--text-primary);
+        line-height: 1.6;
+      }
+
+      .snap-container {
+        height: 100vh;
+        overflow-y: scroll;
+        scroll-snap-type: y mandatory;
+        scroll-behavior: smooth;
+      }
+
+      .snap-container::-webkit-scrollbar {
+        width: 0;
+      }
+
+      section {
+        height: 100vh;
+        width: 100%;
+        scroll-snap-align: start;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        padding: 0 4rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+      }
+
+      .section-content-wrapper {
+        max-width: var(--max-width);
+        width: 100%;
+        margin: 0 auto;
+        position: relative;
+        z-index: 2;
+      }
+
+      #particles-js {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        z-index: 0;
+        background-image: radial-gradient(
+          circle at 50% 50%,
+          rgba(11, 17, 33, 0.95) 0%,
+          #000 100%
+        );
+      }
+
+      .floating-nav {
+        position: fixed;
+        top: 50%;
+        right: 30px;
+        transform: translateY(-50%);
+        display: flex;
+        flex-direction: column;
+        gap: 1.2rem;
+        z-index: 1000;
+      }
+
+      .nav-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        cursor: pointer;
+        transition: all 0.3s;
+        position: relative;
+      }
+
+      .nav-dot::after {
+        content: attr(data-label);
+        position: absolute;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-primary);
+        font-size: 0.75rem;
+        opacity: 0;
+        white-space: nowrap;
+        transition: opacity 0.3s;
+        pointer-events: none;
+        padding-right: 10px;
+      }
+
+      .nav-dot:hover::after {
+        opacity: 1;
+      }
+
+      .nav-dot.active {
+        background: var(--accent-cyan);
+        transform: scale(1.3);
+      }
+
+      .section-header {
+        margin-bottom: 2.5rem;
+      }
+
+      .title-icon {
+        font-size: 2.5rem;
+        margin-right: 1rem;
+        vertical-align: middle;
+        background: linear-gradient(
+          to bottom right,
+          var(--accent-cyan),
+          var(--accent-blue)
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        display: inline-block;
+      }
+
+      .section-title {
+        font-size: 2.2rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        display: inline-block;
+        vertical-align: middle;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.8s ease-out;
+      }
+
+      .section-subtitle {
+        color: var(--accent-cyan);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        font-size: 0.9rem;
+        display: block;
+        margin-bottom: 0.5rem;
+        padding-left: 3.5rem;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.8s ease-out 0.2s;
+      }
+
+      .text-content {
+        font-size: 1.05rem;
+        color: var(--text-secondary);
+        max-width: 800px;
+        margin-bottom: 2.5rem;
+        padding-left: 0.5rem;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.8s ease-out 0.4s;
+        text-align: justify;
+      }
+
+      .visible {
+        opacity: 1 !important;
+        transform: translateY(0) !important;
+      }
+
+      .home-icon-large {
+        font-size: 5rem;
+        margin-bottom: 1.5rem;
+        background: linear-gradient(
+          135deg,
+          var(--accent-cyan),
+          var(--accent-blue)
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        opacity: 0;
+        animation: fadeIn 1s ease-out forwards;
+      }
+
+      @keyframes fadeIn {
+        to {
+          opacity: 1;
+        }
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+        width: 100%;
+      }
+
+      .feature-card {
+        background: var(--card-bg);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 2rem;
+        border-radius: 8px;
+        transition: transform 0.3s;
+        opacity: 0;
+        transform: translateY(20px);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .feature-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--accent-cyan);
+        opacity: 0.5;
+      }
+
+      .feature-card:nth-child(2)::before {
+        background: var(--accent-blue);
+      }
+      .feature-card:nth-child(3)::before {
+        background: var(--accent-purple);
+      }
+
+      .feature-card:hover {
+        transform: translateY(-5px);
+        border-color: rgba(6, 182, 212, 0.4);
+      }
+
+      .card-title {
+        font-size: 1.25rem;
+        margin-bottom: 0.8rem;
+        color: var(--text-primary);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .card-text {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        line-height: 1.6;
+      }
+
+      .stats-container {
+        display: flex;
+        gap: 4rem;
+        margin-top: 2rem;
+      }
+
+      .stat-item {
+        display: flex;
+        flex-direction: column;
+        border-left: 3px solid rgba(255, 255, 255, 0.1);
+        padding-left: 1.5rem;
+      }
+
+      .stat-number {
+        font-size: 3rem;
+        font-weight: 700;
+        color: var(--accent-green);
+      }
+
+      .stat-label {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .bar-container {
+        margin-bottom: 1.5rem;
+        width: 100%;
+      }
+      .bar-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.4rem;
+        font-size: 0.9rem;
+      }
+      .bar-track {
+        width: 100%;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+      }
+      .bar-fill {
+        height: 100%;
+        background: var(--accent-blue);
+        width: 0;
+        border-radius: 3px;
+        transition: width 1.2s ease-out;
+      }
+
+      .steps-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        margin-top: 2rem;
+        width: 100%;
+      }
+
+      .step-item {
+        background: var(--card-bg);
+        padding: 1.5rem 2rem;
+        border-radius: 8px;
+        border-left: 4px solid var(--accent-cyan);
+        width: 65%;
+        opacity: 0;
+        transform: translateX(-30px);
+        transition: all 0.6s ease-out;
+        position: relative;
+      }
+
+      .step-item:nth-child(1) {
+        align-self: flex-start;
+        transition-delay: 0.1s;
+        border-color: var(--accent-blue);
+      }
+      .step-item:nth-child(2) {
+        align-self: center;
+        transition-delay: 0.3s;
+        border-color: var(--accent-cyan);
+      }
+      .step-item:nth-child(3) {
+        align-self: flex-end;
+        transition-delay: 0.5s;
+        border-color: var(--accent-purple);
+      }
+
+      .step-item.visible {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      .step-year {
+        font-size: 0.85rem;
+        font-weight: 700;
+        opacity: 0.7;
+        margin-bottom: 0.3rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-transform: uppercase;
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+  </head>
+
+  <body>
+    <div id="particles-js"></div>
+
+    <nav class="floating-nav">
+      <div
+        class="nav-dot active"
+        data-label="Home"
+        onclick="scrollToSection('home')"
+      ></div>
+      <div
+        class="nav-dot"
+        data-label="Background"
+        onclick="scrollToSection('about')"
+      ></div>
+      <div
+        class="nav-dot"
+        data-label="Methodology"
+        onclick="scrollToSection('methodology')"
+      ></div>
+      <div
+        class="nav-dot"
+        data-label="Performance"
+        onclick="scrollToSection('results')"
+      ></div>
+      <div
+        class="nav-dot"
+        data-label="Robustness"
+        onclick="scrollToSection('robustness')"
+      ></div>
+      <div
+        class="nav-dot"
+        data-label="Simulation"
+        onclick="scrollToSection('simulation')"
+      ></div>
+      <div
+        class="nav-dot"
+        data-label="Future Work"
+        onclick="scrollToSection('future')"
+      ></div>
+    </nav>
+
+    <div class="snap-container">
+      <section id="home">
+        <div class="section-content-wrapper" style="text-align: center">
+          <i class="ri-ship-2-fill home-icon-large"></i>
+
+          <h1
+            class="section-title visible"
+            style="
+              font-size: 3.5rem;
+              line-height: 1.2;
+              margin-bottom: 2rem;
+              display: block;
+            "
+          >
+            Physics-Guided Deep Learning Framework<br />
+            for Green Shipping Digital Twins
+          </h1>
+        </div>
+      </section>
+
+      <section id="about">
+        <div class="section-content-wrapper">
+          <div class="section-header">
+            <span class="section-subtitle fade-in"
+              >Background & Challenges</span
+            >
+            <i class="ri-question-answer-line title-icon fade-in"></i>
+            <h2 class="section-title fade-in">
+              Dilemma of Data & Mechanism Integration
+            </h2>
+          </div>
+
+          <div class="grid-3">
+            <div class="feature-card fade-in" style="transition-delay: 0.1s">
+              <h3 class="card-title">
+                <i class="ri-database-2-line"></i> Data Heterogeneity
+              </h3>
+              <p class="card-text">
+                Addressing the spatiotemporal misalignment between AIS
+                trajectory data (Lagrangian perspective) and meteorological
+                reanalysis data (Eulerian perspective) by establishing precise
+                assimilation mapping to eliminate interpolation errors.
+              </p>
+            </div>
+            <div class="feature-card fade-in" style="transition-delay: 0.2s">
+              <h3 class="card-title">
+                <i class="ri-scales-3-line"></i> Physical Consistency
+              </h3>
+              <p class="card-text">
+                Purely data-driven models lack hydrodynamic constraints. This
+                study constructs a Surrogate Ground Truth incorporating
+                environmental added resistance effects to provide
+                physics-compliant labels for model training.
+              </p>
+            </div>
+            <div class="feature-card fade-in" style="transition-delay: 0.3s">
+              <h3 class="card-title">
+                <i class="ri-pulse-line"></i> Non-Stationary Adaptation
+              </h3>
+              <p class="card-text">
+                Actual sea conditions are highly dynamic. By introducing
+                physics-guided mechanisms, the model improves prediction
+                accuracy and generalization under complex wind and wave
+                conditions, overcoming the limitations of black-box models.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="methodology">
+        <div class="section-content-wrapper">
+          <div class="section-header">
+            <span class="section-subtitle fade-in">Methodology</span>
+            <i class="ri-mind-map title-icon fade-in"></i>
+            <h2 class="section-title fade-in">
+              Dual-Layer Coupling Architecture
+            </h2>
+          </div>
+          <p class="text-content fade-in">
+            The framework comprises a bottom-layer physics-guided data
+            generation engine and a top-layer physics-aware sequence model.
+          </p>
+
+          <div class="grid-3">
+            <div class="feature-card fade-in">
+              <h3 class="card-title" style="color: var(--accent-green)">
+                Step 1: Spatiotemporal Assimilation
+              </h3>
+              <p class="card-text">
+                Applying the k-d tree algorithm to achieve spatiotemporal
+                alignment of multi-source data, reconstructing the instantaneous
+                environmental field during navigation to provide high-precision
+                input features for dynamic analysis.
+              </p>
+            </div>
+            <div class="feature-card fade-in" style="transition-delay: 0.2s">
+              <h3 class="card-title" style="color: var(--accent-blue)">
+                Step 2: Surrogate Ground Truth
+              </h3>
+              <p class="card-text">
+                Based on classical ship resistance formulas and stochastic
+                environmental perturbation models, generating high-fidelity
+                energy consumption data containing physical mechanisms to solve
+                the scarcity of high-frequency energy labels.
+              </p>
+            </div>
+            <div class="feature-card fade-in" style="transition-delay: 0.4s">
+              <h3 class="card-title" style="color: var(--accent-purple)">
+                Step 3: Transformer Modeling
+              </h3>
+              <p class="card-text">
+                Designing a Transformer network with explicitly embedded
+                physical priors, utilizing self-attention mechanisms to capture
+                long-range temporal dependencies and effectively model the
+                nonlinear hysteresis effects caused by wind and waves.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="results">
+        <div class="section-content-wrapper">
+          <div class="section-header">
+            <span class="section-subtitle fade-in">Experimental Results</span>
+            <i class="ri-bar-chart-grouped-line title-icon fade-in"></i>
+            <h2 class="section-title fade-in">
+              Predictive Accuracy Evaluation
+            </h2>
+          </div>
+          <p class="text-content fade-in">
+            Tests in the northern Gulf of Mexico under winter sea conditions
+            demonstrate that the model outperforms traditional RNN benchmarks in
+            metrics such as Root Mean Square Error (RMSE) and Coefficient of
+            Determination (R²).
+          </p>
+
+          <div class="stats-container fade-in">
+            <div class="stat-item">
+              <span class="stat-number">0.2433</span>
+              <span class="stat-label"
+                ><i class="ri-arrow-down-circle-line"></i> RMSE (kg/h)</span
+              >
+            </div>
+            <div class="stat-item">
+              <span class="stat-number">>0.999</span>
+              <span class="stat-label"
+                ><i class="ri-check-double-line"></i> R² Score</span
+              >
+            </div>
+          </div>
+
+          <div style="margin-top: 3rem; width: 100%" class="fade-in">
+            <div class="bar-container">
+              <div class="bar-header">
+                <span>Transformer (Ours) - RMSE 0.2433</span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill" data-width="95%"></div>
+              </div>
+            </div>
+            <div class="bar-container">
+              <div class="bar-header">
+                <span>LSTM Benchmark - RMSE 0.2498</span>
+              </div>
+              <div class="bar-track">
+                <div
+                  class="bar-fill"
+                  data-width="85%"
+                  style="background: #4b5563"
+                ></div>
+              </div>
+            </div>
+            <div class="bar-container">
+              <div class="bar-header">
+                <span>XGBoost - RMSE 0.4476</span>
+              </div>
+              <div class="bar-track">
+                <div
+                  class="bar-fill"
+                  data-width="50%"
+                  style="background: #4b5563"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="robustness">
+        <div class="section-content-wrapper">
+          <div class="section-header">
+            <span class="section-subtitle fade-in">Robustness Analysis</span>
+            <i class="ri-shield-check-line title-icon fade-in"></i>
+            <h2 class="section-title fade-in">
+              Stability in Non-Stationary Environments
+            </h2>
+          </div>
+          <p class="text-content fade-in">
+            Addressing sensor noise and sudden sea conditions in actual
+            shipping, ablation experiments and comparative analyses verify the
+            strong robustness of the model in dynamic nonlinear environments.
+          </p>
+
+          <div class="grid-3" style="grid-template-columns: 1fr 1fr">
+            <div class="feature-card fade-in">
+              <h3 class="card-title">
+                <i class="ri-sound-module-line"></i> Noise Interference
+                Resistance
+              </h3>
+              <p class="card-text">
+                Experiments show that even with high-frequency random
+                fluctuations in input data, the Transformer model effectively
+                filters noise interference, accurately capturing the main trend
+                of energy consumption changes, demonstrating signal extraction
+                capabilities superior to LSTM and GRU.
+              </p>
+            </div>
+            <div class="feature-card fade-in" style="transition-delay: 0.2s">
+              <h3 class="card-title">
+                <i class="ri-typhoon-line"></i> Extreme Sea Condition
+                Generalization
+              </h3>
+              <p class="card-text">
+                In non-stationary intervals with drastic wave height changes,
+                traditional model predictions often show lag or significant
+                deviation. Benefiting from the global field of view of the
+                attention mechanism, this model more precisely responds to
+                transient energy fluctuations caused by environmental mutations.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="simulation">
+        <div class="section-content-wrapper">
+          <div class="section-header">
+            <span class="section-subtitle fade-in">Case Study</span>
+            <i class="ri-route-line title-icon fade-in"></i>
+            <h2 class="section-title fade-in">
+              Counterfactual Simulation & Optimization
+            </h2>
+          </div>
+          <p class="text-content fade-in">
+            Based on counterfactual deductions using real data from North
+            Atlantic winter routes, the energy-saving potential of the
+            weather-adaptive speed optimization strategy is verified.
+          </p>
+
+          <div class="grid-3">
+            <div class="feature-card fade-in">
+              <h3 class="card-title">
+                <i class="ri-settings-4-line"></i> Strategy Mechanism
+              </h3>
+              <p class="card-text">
+                Implementing an active load management strategy of "decelerating
+                in high-resistance zones to avoid waves, and accelerating in
+                low-resistance zones" to optimize energy efficiency under
+                Just-In-Time (JIT) constraints.
+              </p>
+            </div>
+            <div class="feature-card fade-in" style="transition-delay: 0.2s">
+              <h3 class="card-title">
+                <i class="ri-drop-line"></i> Energy Saving
+              </h3>
+              <p class="card-text">
+                Simulation results show that this strategy achieves "5.54%""
+                fuel savings per voyage, equivalent to a reduction of
+                approximately "956 kg" of fuel consumption.
+              </p>
+            </div>
+            <div class="feature-card fade-in" style="transition-delay: 0.4s">
+              <h3 class="card-title">
+                <i class="ri-leaf-line"></i> Emission Reduction
+              </h3>
+              <p class="card-text">
+                A single voyage reduces carbon dioxide emissions by
+                approximately "2.98 tons", providing a feasible solution for
+                ships to meet CII rating requirements without hardware
+                retrofitting.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="future">
+        <div class="section-content-wrapper">
+          <div class="section-header">
+            <span class="section-subtitle fade-in">Future Directions</span>
+            <i class="ri-compass-3-line title-icon fade-in"></i>
+            <h2 class="section-title fade-in">Future Roadmap</h2>
+          </div>
+
+          <div class="steps-container">
+            <div class="step-item fade-in">
+              <span class="step-year" style="color: var(--accent-blue)">
+                <i class="ri-grid-fill"></i> Phase I: Multi-Physics Coupling &
+                Expansion
+              </span>
+              <h3 class="card-title">
+                Model Generalization & Vessel Adaptation
+              </h3>
+              <p class="card-text">
+                Expanding from the current single vessel type to container
+                ships, tankers, and others, while incorporating more complex
+                fluid-structure interaction effects to establish a general
+                physics-guided energy efficiency model covering the entire
+                fleet.
+              </p>
+            </div>
+
+            <div class="step-item fade-in">
+              <span class="step-year" style="color: var(--accent-cyan)">
+                <i class="ri-shuffle-line"></i> Phase II: Dynamic Decision
+                Enhancement
+              </span>
+              <h3 class="card-title">
+                Uncertainty Quantification & Robust Control
+              </h3>
+              <p class="card-text">
+                Introducing probabilistic forecasting mechanisms to
+                quantitatively analyze the uncertainty of meteorological
+                forecasts, upgrading from simple "energy consumption prediction"
+                to "risk-aware" joint optimization of speed and route.
+              </p>
+            </div>
+
+            <div class="step-item fade-in">
+              <span class="step-year" style="color: var(--accent-purple)">
+                <i class="ri-global-line"></i> Phase III: Digital Ecosystem Loop
+              </span>
+              <h3 class="card-title">Lifecycle Digital Twin</h3>
+              <p class="card-text">
+                Constructing a ship-shore integrated real-time digital twin
+                system that serves not only single-voyage optimization but also
+                integrates with CII ratings and carbon market dynamics to
+                achieve energy efficiency compliance management throughout the
+                ship's lifecycle.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      particlesJS("particles-js", {
+        particles: {
+          number: { value: 60, density: { enable: true, value_area: 800 } },
+          color: { value: "#ffffff" },
+          shape: { type: "circle" },
+          opacity: { value: 0.2, random: true },
+          size: { value: 2, random: true },
+          line_linked: {
+            enable: true,
+            distance: 150,
+            color: "#ffffff",
+            opacity: 0.1,
+            width: 1,
+          },
+          move: {
+            enable: true,
+            speed: 1.5,
+            direction: "none",
+            random: false,
+            straight: false,
+            out_mode: "out",
+            bounce: false,
+          },
+        },
+        interactivity: {
+          detect_on: "canvas",
+          events: {
+            onhover: { enable: true, mode: "bubble" },
+            onclick: { enable: true, mode: "push" },
+            resize: true,
+          },
+          modes: {
+            bubble: {
+              distance: 200,
+              size: 4,
+              duration: 2,
+              opacity: 0.4,
+              speed: 3,
+            },
+          },
+        },
+        retina_detect: true,
+      });
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target
+                .querySelectorAll(".fade-in")
+                .forEach((el) => el.classList.add("visible"));
+
+              const bars = entry.target.querySelectorAll(".bar-fill");
+              bars.forEach((bar) => {
+                const targetWidth = bar.getAttribute("data-width");
+                bar.style.width = "0";
+                setTimeout(() => {
+                  bar.style.width = targetWidth;
+                }, 100);
+              });
+
+              const currentId = entry.target.id;
+              document.querySelectorAll(".nav-dot").forEach((dot) => {
+                dot.classList.remove("active");
+                const labelMap = {
+                  home: "Home",
+                  about: "Background",
+                  methodology: "Methodology",
+                  results: "Performance",
+                  robustness: "Robustness",
+                  simulation: "Simulation",
+                  future: "Future Work",
+                };
+                if (dot.getAttribute("data-label") === labelMap[currentId]) {
+                  dot.classList.add("active");
+                }
+              });
+            }
+          });
+        },
+        { threshold: 0.4 }
+      );
+
+      document
+        .querySelectorAll("section")
+        .forEach((sec) => observer.observe(sec));
+
+      function scrollToSection(id) {
+        document.getElementById(id).scrollIntoView({ behavior: "smooth" });
+      }
+    </script>
+  </body>
+</html>
